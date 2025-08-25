@@ -2,17 +2,25 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
+// Add debugging for environment variables
+console.log('Environment check:', {
+  EMAIL_USER: process.env.EMAIL_USER ? 'Set' : 'Missing',
+  EMAIL_PASS: process.env.EMAIL_PASS ? 'Set' : 'Missing',
+  RECEIVER_EMAIL: process.env.RECEIVER_EMAIL ? 'Set' : 'Missing',
+  NODE_ENV: process.env.NODE_ENV
+});
+
 // Create reusable transporter object using SMTP transport
 const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail', // You can change this to your email service
+  return nodemailer.createTransporter({
+    service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USER, // Your email
-      pass: process.env.EMAIL_PASS, // Your app password
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
     },
-     tls: {
-    rejectUnauthorized: false,
-  }
+    tls: {
+      rejectUnauthorized: false,
+    }
   });
 };
 
@@ -106,16 +114,6 @@ const getSenderEmailTemplate = (senderName) => {
                 margin: 0;
                 color: #6b7280;
                 font-size: 14px;
-            }
-            .cta-button {
-                display: inline-block;
-                background-color: #2563eb;
-                color: white;
-                text-decoration: none;
-                padding: 12px 24px;
-                border-radius: 6px;
-                font-weight: 600;
-                margin: 20px 0;
             }
         </style>
     </head>
@@ -370,9 +368,44 @@ const getReceiverEmailTemplate = (formData) => {
   `;
 };
 
+// Add GET method for debugging
+export async function GET() {
+  return NextResponse.json(
+    { 
+      message: 'Contact API is working',
+      timestamp: new Date().toISOString(),
+      env_check: {
+        EMAIL_USER: process.env.EMAIL_USER ? 'Set' : 'Missing',
+        EMAIL_PASS: process.env.EMAIL_PASS ? 'Set' : 'Missing',
+        NODE_ENV: process.env.NODE_ENV
+      }
+    },
+    { status: 200 }
+  );
+}
+
 export async function POST(request) {
+  console.log('POST request received at:', new Date().toISOString());
+  
   try {
+    // Check environment variables first
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error('Missing environment variables:', {
+        EMAIL_USER: process.env.EMAIL_USER ? 'Set' : 'Missing',
+        EMAIL_PASS: process.env.EMAIL_PASS ? 'Set' : 'Missing'
+      });
+      
+      return NextResponse.json(
+        { 
+          error: 'Server configuration error. Please contact the administrator.',
+          debug: process.env.NODE_ENV === 'development' ? 'Missing EMAIL_USER or EMAIL_PASS environment variables' : undefined
+        },
+        { status: 500 }
+      );
+    }
+
     const formData = await request.json();
+    console.log('Received form data:', { ...formData, email: formData.email ? 'provided' : 'missing' });
     
     // Validate required fields
     if (!formData.name || !formData.email || !formData.message) {
@@ -391,7 +424,23 @@ export async function POST(request) {
       );
     }
 
+    console.log('Creating email transporter...');
     const transporter = createTransporter();
+
+    // Test the connection
+    try {
+      await transporter.verify();
+      console.log('SMTP connection verified successfully');
+    } catch (verifyError) {
+      console.error('SMTP verification failed:', verifyError);
+      return NextResponse.json(
+        { 
+          error: 'Email service configuration error. Please try again later.',
+          debug: process.env.NODE_ENV === 'development' ? verifyError.message : undefined
+        },
+        { status: 500 }
+      );
+    }
 
     // Email to sender (thank you email)
     const senderMailOptions = {
@@ -410,11 +459,15 @@ export async function POST(request) {
       replyTo: formData.email,
     };
 
+    console.log('Sending emails...');
+    
     // Send both emails
     await Promise.all([
       transporter.sendMail(senderMailOptions),
       transporter.sendMail(receiverMailOptions),
     ]);
+
+    console.log('Emails sent successfully');
 
     return NextResponse.json(
       { 
