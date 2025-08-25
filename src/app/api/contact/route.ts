@@ -1,6 +1,16 @@
-// app/api/contact/route.js
-import { NextResponse } from 'next/server';
+// app/api/contact/route.ts
+import { NextResponse, NextRequest } from 'next/server';
 import nodemailer from 'nodemailer';
+
+// Type definitions
+interface ContactFormData {
+  name: string;
+  email: string;
+  message: string;
+  phone?: string;
+  company?: string;
+  service?: string;
+}
 
 // Create reusable transporter object using SMTP transport
 const createTransporter = () => {
@@ -10,14 +20,14 @@ const createTransporter = () => {
       user: process.env.EMAIL_USER, // Your email
       pass: process.env.EMAIL_PASS, // Your app password
     },
-     tls: {
-    rejectUnauthorized: false,
-  }
+    tls: {
+      rejectUnauthorized: false,
+    }
   });
 };
 
 // Email template for the sender (thank you email)
-const getSenderEmailTemplate = (senderName:any) => {
+const getSenderEmailTemplate = (senderName: string): string => {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -163,7 +173,7 @@ const getSenderEmailTemplate = (senderName:any) => {
 };
 
 // Email template for the receiver (new contact notification)
-const getReceiverEmailTemplate = (formData:any) => {
+const getReceiverEmailTemplate = (formData: ContactFormData): string => {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -370,9 +380,9 @@ const getReceiverEmailTemplate = (formData:any) => {
   `;
 };
 
-export async function POST(request:any) {
+export async function POST(request: NextRequest) {
   try {
-    const formData = await request.json();
+    const formData: ContactFormData = await request.json();
     
     // Validate required fields
     if (!formData.name || !formData.email || !formData.message) {
@@ -430,7 +440,7 @@ export async function POST(request:any) {
     return NextResponse.json(
       { 
         error: 'Failed to send message. Please try again or contact us directly.',
-        details: process.env.NODE_ENV === 'development'
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
       },
       { status: 500 }
     );
