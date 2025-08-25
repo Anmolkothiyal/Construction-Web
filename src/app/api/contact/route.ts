@@ -17,7 +17,7 @@ const createTransporter = () => {
 };
 
 // Email template for the sender (thank you email)
-const getSenderEmailTemplate = (senderName) => {
+const getSenderEmailTemplate = (senderName:any) => {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -163,7 +163,7 @@ const getSenderEmailTemplate = (senderName) => {
 };
 
 // Email template for the receiver (new contact notification)
-const getReceiverEmailTemplate = (formData) => {
+const getReceiverEmailTemplate = (formData:any) => {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -370,7 +370,7 @@ const getReceiverEmailTemplate = (formData) => {
   `;
 };
 
-export async function POST(request) {
+export async function POST(request:any) {
   try {
     const formData = await request.json();
     
@@ -430,7 +430,7 @@ export async function POST(request) {
     return NextResponse.json(
       { 
         error: 'Failed to send message. Please try again or contact us directly.',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development'
       },
       { status: 500 }
     );
