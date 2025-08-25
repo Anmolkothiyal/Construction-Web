@@ -55,65 +55,65 @@ export default function Contact() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Submitting form with data:", formData); // Debug log
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  console.log("Submitting form with data:", formData);
+  console.log("Fetch URL:", '/api/contact');
+  setSubmitStatus({
+    isSubmitting: true,
+    isSuccess: false,
+    isError: false,
+    message: "Sending your message...",
+  });
 
-    setSubmitStatus({
-      isSubmitting: true,
-      isSuccess: false,
-      isError: false,
-      message: "Sending your message...",
+  try {
+    const response = await fetch('/api/contact', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
     });
 
-    try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`HTTP error! Status: ${response.status}, Response: ${text}`);
+      throw new Error(`Failed to send message. Server responded with status ${response.status}: ${text}`);
+    }
 
-      const result = await response.json();
-      console.log("Server response:", result); // Debug log
+    const result = await response.json();
+    console.log("Server response:", result);
 
-      if (response.ok) {
-        setSubmitStatus({
-          isSubmitting: false,
-          isSuccess: true,
-          isError: false,
-          message: result.message || "Your message has been sent successfully! We'll get back to you soon.",
-        });
-        resetForm();
+    setSubmitStatus({
+      isSubmitting: false,
+      isSuccess: true,
+      isError: false,
+      message: result.message || "Your message has been sent successfully! We'll get back to you soon.",
+    });
+    resetForm();
 
-        // Auto-hide success message after 10 seconds
-        setTimeout(() => {
-          setSubmitStatus({
-            isSubmitting: false,
-            isSuccess: false,
-            isError: false,
-            message: "",
-          });
-        }, 10000);
-      } else {
-        setSubmitStatus({
-          isSubmitting: false,
-          isSuccess: false,
-          isError: true,
-          message: result.error || "Failed to send message. Please try again.",
-        });
-      }
-    } catch (error) {
-      console.error("Submission error:", error); // Debug log
+    setTimeout(() => {
       setSubmitStatus({
         isSubmitting: false,
         isSuccess: false,
-        isError: true,
-        message: "Network error. Please check your connection and try again.",
+        isError: false,
+        message: "",
       });
+    }, 10000);
+  } catch (error) {
+    console.error("Submission error:", error);
+    let errorMessage = "Network error. Please check your connection and try again.";
+    if (error instanceof Error) {
+      errorMessage = error.message;
     }
-  };
+    setSubmitStatus({
+      isSubmitting: false,
+      isSuccess: false,
+      isError: true,
+      message: errorMessage,
+    });
+  }
+};
 
   const services = [
     "Infrastructure Development",
